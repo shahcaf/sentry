@@ -7,6 +7,8 @@ const { Client, GatewayIntentBits, Partials, Collection, PermissionsBitField } =
 const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
+const express = require('express');
+const app = express();
 require('dotenv').config();
 
 // Create client instance
@@ -124,6 +126,11 @@ async function init() {
     loadCommands();
     loadEvents();
     
+    // Express server for Render health checks (fixes "no open ports" issue)
+    const port = process.env.PORT || 10000;
+    app.get('/', (req, res) => res.send('Bot is healthy and running!'));
+    app.listen(port, () => console.log(`[SERVER] Health check server listening on port ${port}`));
+
     await client.login(client.config.token);
 }
 
