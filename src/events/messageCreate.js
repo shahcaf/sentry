@@ -14,8 +14,7 @@ module.exports = {
         if (!message.guild) return;
 
         // Initialize coinflip2 handler
-        const coinflip2 = new Coinflip2Command(client);
-        await coinflip2.handle(message);
+        await Coinflip2Command.handle(message);
 
         // Check if user is blacklisted
         const blacklisted = await isBlacklisted(message.author.id, message.guild.id);

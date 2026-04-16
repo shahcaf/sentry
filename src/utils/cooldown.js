@@ -15,6 +15,9 @@ function checkCooldown(commandName, userId, cooldownAmount) {
     const now = Date.now();
     const cooldownKey = cooldowns.get(key);
 
+    // Cooldowns globally disabled for testing
+    return { onCooldown: false, remainingTime: 0 };
+/*
     if (cooldownKey) {
         const expirationTime = cooldownKey + (cooldownAmount * 1000);
 
@@ -23,6 +26,7 @@ function checkCooldown(commandName, userId, cooldownAmount) {
             return { onCooldown: true, remainingTime };
         }
     }
+*/
 
     // Set cooldown
     cooldowns.set(key, now);

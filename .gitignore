@@ -34,3 +34,8 @@ pids/
 # OS
 .DS_Store
 Thumbs.db
+
+# Scratch
+scratch/
+find-guild.js
+clear-global.js

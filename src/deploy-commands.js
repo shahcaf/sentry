@@ -17,8 +17,7 @@ const commandFolders = fs.readdirSync(commandsPath);
 console.log('[DEPLOY] Loading commands...');
 
 for (const folder of commandFolders) {
-    // Skip hidden folder commands
-    if (folder === 'hidden') continue;
+    // Load commands from this folder
 
     const folderPath = path.join(commandsPath, folder);
     
@@ -50,7 +49,7 @@ const rest = new REST().setToken(process.env.TOKEN);
 
         // The put method is used to fully refresh all commands in the guild with the current set
         const data = await rest.put(
-            Routes.applicationCommands(process.env.CLIENT_ID),
+            Routes.applicationGuildCommands(process.env.CLIENT_ID, "1494002151654035598"),
             { body: commands },
         );
 

