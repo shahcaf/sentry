@@ -42,28 +42,56 @@ for (const folder of commandFolders) {
 // Construct and prepare an instance of the REST module
 const rest = new REST().setToken(process.env.TOKEN);
 
-// Deploy commands
-(async () => {
+// Export as function for auto-deploy on start
+async function deployOnStart(client) {
     try {
-        console.log(`[DEPLOY] Started refreshing ${commands.length} application (/) commands.`);
-
+        console.log(`[DEPLOY] Auto-deploying ${commands.length} commands...`);
+        
+        // Use GUILD_ID from env if available, otherwise register globally
         if (process.env.GUILD_ID) {
-            // Deploy specifically to a guild (fast update)
-            const data = await rest.put(
+            await rest.put(
                 Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
                 { body: commands },
             );
-            console.log(`[DEPLOY] Successfully reloaded ${data.length} application (/) commands for GUILD: ${process.env.GUILD_ID}`);
+            console.log(`[DEPLOY] Successfully registered commands for guild: ${process.env.GUILD_ID}`);
         } else {
-            // Deploy globally (can take up to an hour, but usually instant now)
-            const data = await rest.put(
+            // Register globally
+            await rest.put(
                 Routes.applicationCommands(process.env.CLIENT_ID),
                 { body: commands },
             );
-            console.log(`[DEPLOY] Successfully reloaded ${data.length} application (/) commands GLOBALLY.`);
-            console.log('[DEPLOY] Note: Global commands can take up to an hour to propagate to all servers.');
+            console.log('[DEPLOY] Successfully registered commands GLOBALLY.');
         }
     } catch (error) {
         console.error('[DEPLOY ERROR]', error);
     }
-})();
+}
+
+module.exports = { deployOnStart };
+
+// Run if called directly
+if (require.main === module) {
+    (async () => {
+        try {
+            console.log(`[DEPLOY] Started refreshing ${commands.length} application (/) commands.`);
+
+            if (process.env.GUILD_ID) {
+                // Deploy specifically to a guild (fast update)
+                const data = await rest.put(
+                    Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+                    { body: commands },
+                );
+                console.log(`[DEPLOY] Successfully reloaded ${data.length} application (/) commands for GUILD: ${process.env.GUILD_ID}`);
+            } else {
+                // Deploy globally (can take up to an hour, but usually instant now)
+                const data = await rest.put(
+                    Routes.applicationCommands(process.env.CLIENT_ID),
+                    { body: commands },
+                );
+                console.log(`[DEPLOY] Successfully reloaded ${data.length} application (/) commands GLOBALLY.`);
+            }
+        } catch (error) {
+            console.error('[DEPLOY ERROR]', error);
+        }
+    })();
+}

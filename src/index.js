@@ -131,6 +131,10 @@ async function init() {
     loadCommands();
     loadEvents();
     
+    // Auto-deploy commands on startup
+    const { deployOnStart } = require('./deploy-commands');
+    await deployOnStart(client);
+
     await client.login(client.config.token);
 }
 
