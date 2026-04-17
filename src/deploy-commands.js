@@ -47,14 +47,22 @@ const rest = new REST().setToken(process.env.TOKEN);
     try {
         console.log(`[DEPLOY] Started refreshing ${commands.length} application (/) commands.`);
 
-        // The put method is used to fully refresh all commands in the guild with the current set
-        const data = await rest.put(
-            Routes.applicationGuildCommands(process.env.CLIENT_ID, "1494002151654035598"),
-            { body: commands },
-        );
-
-        console.log(`[DEPLOY] Successfully reloaded ${data.length} application (/) commands.`);
-        console.log('[DEPLOY] Commands registered globally.');
+        if (process.env.GUILD_ID) {
+            // Deploy specifically to a guild (fast update)
+            const data = await rest.put(
+                Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+                { body: commands },
+            );
+            console.log(`[DEPLOY] Successfully reloaded ${data.length} application (/) commands for GUILD: ${process.env.GUILD_ID}`);
+        } else {
+            // Deploy globally (can take up to an hour, but usually instant now)
+            const data = await rest.put(
+                Routes.applicationCommands(process.env.CLIENT_ID),
+                { body: commands },
+            );
+            console.log(`[DEPLOY] Successfully reloaded ${data.length} application (/) commands GLOBALLY.`);
+            console.log('[DEPLOY] Note: Global commands can take up to an hour to propagate to all servers.');
+        }
     } catch (error) {
         console.error('[DEPLOY ERROR]', error);
     }

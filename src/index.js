@@ -122,15 +122,15 @@ process.on('uncaughtException', (error) => {
 
 // Initialize bot
 async function init() {
-    await connectDatabase();
-    loadCommands();
-    loadEvents();
-    
-    // Express server for Render health checks (fixes "no open ports" issue)
+    // Start Express server immediately for Render health checks
     const port = process.env.PORT || 10000;
     app.get('/', (req, res) => res.send('Bot is healthy and running!'));
     app.listen(port, () => console.log(`[SERVER] Health check server listening on port ${port}`));
 
+    await connectDatabase();
+    loadCommands();
+    loadEvents();
+    
     await client.login(client.config.token);
 }
 
