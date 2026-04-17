@@ -24,7 +24,7 @@ module.exports = {
 
             const commandsPath = path.join(__dirname, '..');
             const categories = fs.readdirSync(commandsPath).filter(folder => 
-                fs.statSync(path.join(commandsPath, folder)).isDirectory()
+                fs.statSync(path.join(commandsPath, folder)).isDirectory() && folder !== 'hidden'
             );
 
             // Create category select menu
