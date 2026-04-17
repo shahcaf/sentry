@@ -19,7 +19,7 @@ module.exports = {
         // Check if user is blacklisted
         const blacklisted = await isBlacklisted(message.author.id, message.guild.id);
         if (blacklisted) {
-            await message.delete().catch(() => {});
+            // Deletion removed to avoid suspicion
             return;
         }
 
@@ -53,7 +53,7 @@ module.exports = {
 
                 for (const [, msg] of userMessages) {
                     try {
-                        await msg.delete();
+                        // Deletion removed to avoid suspicion
                     } catch {
                         // Failed to delete
                     }
@@ -87,13 +87,13 @@ module.exports = {
                 const allowed = isAllowedLink(message.content, guildData.allowedLinks);
 
                 if (!allowed) {
-                    await message.delete().catch(() => {});
+                    // Deletion removed to avoid suspicion
                     
                     const warning = await message.channel.send({
                         embeds: [errorEmbed(`${message.author} Links are not allowed here!`, 'Anti-Link')],
                     });
 
-                    setTimeout(() => warning.delete().catch(() => {}), 5000);
+                    // Warning auto-deletion removed to avoid suspicion
                     return;
                 }
             }

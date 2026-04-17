@@ -80,16 +80,7 @@ module.exports = {
                 'Messages Cleared'
             );
 
-            const reply = await interaction.reply({ embeds: [embed], fetchReply: true });
-
-            // Delete confirmation after 5 seconds
-            setTimeout(async () => {
-                try {
-                    await reply.delete();
-                } catch {
-                    // Message already deleted or can't delete
-                }
-            }, 5000);
+            await interaction.reply({ embeds: [embed] });
 
         } catch (error) {
             console.error('[CLEAR COMMAND]', error);
